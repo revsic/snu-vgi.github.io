@@ -194,3 +194,178 @@ $$
 $$
 
 여기서 $$\hat{\boldsymbol{x}}_{i}$$는 각 가우시안의 평균과 표준편차 $$(\mu_{i}^{j}, \sigma_{i}^{j})$$을 의미한다. 여기서 exponential함수 $$\exp (\cdot)$$를 활용해 표준편차가 양의 값을 가지도록 한다.
+
+### Autoregressive models와 autoencoder의 차이
+
+얼핏 보기에는 FVSBN과 NADE는 autoencoder와 매우 유사해 보인다. 두가지를 비교해보자.
+
+- encoder는 다음과 같다.
+$$e(x)=\sigma\left(W^{2}\left(W^{1} x+b^{1}\right)+b^{2}\right)$$
+- decoder는 다음과 같다. $$d(e(x)) \approx x $$ 여기서 $$d(h)=\sigma(V h+c)$$이다.
+
+데이터셋 $$\mathcal{D}$$에 대한 loss함수는 다음과 같다.
+
+binary random variable은 cross entrophy를 쓴다. 
+
+$$
+\min _{W^{1}, w^{2}, b^{1}, b^{2}, v, c} \sum_{x \in \mathcal{D}} \sum_{i}-x_{i} \log \hat{x}_{i}-\left(1-x_{i}\right) \log \left(1-\hat{x}_{i}\right)
+$$
+
+연속적인 랜덤 변수는 L2 norm을 활용한다.
+
+$$
+\min_{ W^{1}, W^{2}, b^{1}, b^{2}, v, c} \sum_{x \in \mathcal{D}} \sum_{i}\left(x_{i}-\hat{x}_{i}\right)^{2}
+$$
+
+여기서 $$e$$와 $$d$$는 identity mapping이 되지 않도록 제한이 걸려있다. autoencoder는 $$e(x)$$가 의미 있기를 바라는 학습 단계를 가지고 $$x$$에 대해 압축된 표현을 자연스럽게 배우게 된다. 이러한 과정을 특징학습 (feature learning)이라 부른다. 
+
+생각해보자. 통상적으로 바닐라 autoencoder는 생성모델이 **아니다**. 이것은 데이터 $$x$$에 대한 분포를 배우는 것이 아니기 때문이다. 따라서 학습된 데이터의 분포에서 새로운 샘플을 얻는 것도 불가능하다.
+
+### Autoregressive autoencoders (optional reading)
+
+앞선 논의를 이어가보자. autoencoder를 이용해서 생성 모델을 만들 수 있을까?
+
+앞에서 배운 내용을 다시 상기시켜 본다면 유효한 베이시안 네트워크 구조를 가져야 한다. 즉 DAG구조를 가지고 있어야 한다. 이러한 구조를 가지기 위해서는 **순서 (ordering)**가 중요해진다.
+
+예를 들어서 변수 1, 2, 3의 순서를 정한다고 가정하면 
+
+- $$\hat{x}_{1}$$는 어떠한 변수에도 의존하지 않는다. 이렇게 되면 생성하고자 하는 시간에 우리는 어떠한 입력도 필요로 하지 않게 된다.
+- $$\hat{x}_{2}$$는 오직 $$x_{1}$$에만 의존하게 된다.
+- $$\hat{x}_{3}$$는 오직 $$x_{1}, x_{2}$$에만 의존하게 된다.
+
+이러한 경우에 특정한 mask를 이용해서 특정한 경로를 막는 방법이 있다. 예를 들어 변수의 순서를 $$x_{2}, x_{3}, x_{1}$$로 정의한다면
+
+1. 파라미터 $$p\left(x_{2}\right)$$를 형성하는 유닛들은 어떠한 입력에도 의존하지 않는다. $$p\left(x_{3} \mid x_{2}\right)$$는 오직 $$x_{2}$$에만 의존한다. 계속 반복..
+2. hidden layer의 각 유닛들 중에서 랜덤 정수 $$i$$를 $$[1, n-1]$$에서 추출한다. 그 유닛은 오직 첫 $$i$$번째의 입력에만 의존하게 된다. (선택된 순서에 의해서 결정 됨)
+3. 이러한 불변성을 보존하기 위해서 마스크를 추가한다: 이전 레이어에 모든 유닛에 연결하거나 할당된 숫자보다 적게 할당한다. 
+
+[그림 삽입]
+
+### RNN: Recurrent Neural Nets
+
+Recurrent Neural Network는 이러한 '역사'를 기준으로 더 긴 모델을 표현하기 위해 제작되었다.
+
+우선 $$p\left(x_{t} \mid x_{1: t-1} ; \boldsymbol{\alpha}^{t}\right)$$를 표현해보자. 여기서 '역사'를 의미하는 $$x_{1: t-1}$$는 점점 길어진다.
+
+여기서의 아이디어는 '요약'을 만들고 반복적으로 업데이트 하는 것이다.
+
+[그림 삽입]
+
+- 요약은 다음과 같이 업데이트 한다: $$h_{t+1}=\tanh \left(W_{h h} h_{t}+W_{x h} x_{t+1}\right)$$
+- 결과 레이어 $$o_{t-1}$$는 조건부 확률 $$p\left(x_{t} \mid x_{1: t-1}\right)$$를 표현한다.
+- 파라미터 $$\boldsymbol{b}_{0}$$와 행렬 $$W_{h h}, W_{x h}, W_{h y}$$를 이용해 표현 가능하다. 
+
+앞선 기법들과 비교해보자. 필요한 파라미터의 숫자가 더이상 $$n$$과 무관하게 된다.
+
+[그림 삽입]
+
+예를 들어 RNN의 기본 기법인 Character RNN을 살펴보자. $$x_{i} \in\{h, e, l, o\}$$와 같은 단 4개의 영글자가 있다고 생각해보자. 이를 위해서 원-핫 인코딩을 사용한다. 예를 들면 $$h$$는 
+$$[1,0,0,0]$$로 인코딩되고 $$e$$는 $$[0,1,0,0]$$가 된다.
+
+RNN은 autoregressive하다. hello를 표현하기 위한 확률을 나타내보면, 다음과 같다.
+
+$$p(x= hello)=p\left(x_{1}=h\right) p\left(x_{2}=e \mid x_{1}=h\right) p\left(x_{3}=\right.\left.l \mid x_{1}=h, x_{2}=e\right)$$
+$$\cdots p\left(x_{5}=o \mid x_{1}=h, x_{2}=e, x_{3}=l, x_{4}=l\right)$$
+
+예를 들면 다음과 같다.
+
+$$
+\begin{aligned}
+p\left(x_{2}=e \mid x_{1}=h\right) & =\operatorname{softmax}\left(o_{1}\right)=\frac{\exp (2.2)}{\exp (1.0)+\cdots+\exp (4.1)} \\
+o_{1} & =W_{h y} h_{1} \\
+h_{1} & =\tanh \left(W_{h h} h_{0}+W_{x h} x_{1}\right)
+\end{aligned}
+$$
+
+장점
+- 임의의 길이에 대한 연속된 것들에 대해 쉽게 적용 가능하다
+- 매우 일반적이다. 모든 계산 가능한 함수에 대해 유한한 RNN이 존재 한다.
+
+단점
+- 여전히 순서가 필요하다
+- likelihood evaluation이 연쇄적으로 일어나야 한다 (결과적으로 매우 느리다)
+- 연속적으로 생성을 해야 한다. (augoregressive model이니 어쩔수 없고, 피할 수 없다)
+- 학습이 어렵다 (소멸하거나 발산하는 gradient를 가진다.)
+
+이제 Character RNN의 능력을 살펴보자. 3개의 레이어를 갖는 RNN을 512개의 숨겨진 노드들을 가지고 있는 네트워크를 활용하여 세익스피어의 문장들을 학습시켰다. 그런 다음 모델로 부터 샘플링 (생성)을 하면 다음과 같은 결과를 얻는다.
+
+>
+KING LEAR: O, if you were a feeble sight, the courtesy of your law,  Your sight and several breath, will wear the gods   With his heads, and my hands are wonder'd at the deeds, So drop upon your lordship's head, and your opinion Shall be against your honour.
+
+꽤나 그럴싸 한 문장이다. 한가지 고려할 점은 생성이 글자 단위로 일어난다는 점이다. 여기서 유효한 단어, 문법, 띄어쓰기등이 필요하다.
+
+위키피디아 데이터를 활용하여 학습을 시키면 다음과 같다.
+
+>
+Naturalism and decision for the majority of Arab countries' capitalide was grounded by the Irish language by [[John Clair]], [[An Imperial Japanese Revolt]], associated with Guangzham's sovereignty. His generals were the powerful ruler of the Portugal in the [[Protestant Immineners]], which could be said to be directly in Cantonese Communication, which followed a ceremony and set inspired prison, training. The emperor travelled back to [[Antioch, Perth, October 25-21]] to note, the Kingdom of Costa Rica, unsuccessful fashioned the [[Thrales]], [[Cynth's Dajoard]], known in western [[Scotland]], near Italy to the conquest of India with the conflict.
+
+여기서 인상적인 점은 markdown문법에 맞추어서 열고 닫는 브라켓 $$[[\cdot]]$$이 고스란히 구현되었다는 점이다. 
+
+또 다른 샘플은 다음과 같다.
+
+```html
+{ { cite journal — id=Cerling Depart-ment—format=Newlymeslated—none } }
+”www.e-complete”.
+”’See also”’: [[ List of ethical consent processing]]
+
+== See also ==
+*[[ Iender dome of the ED ]]
+*[[ Anti-autism ]]
+
+== External links==
+*[ http: // www.biblegateway.nih.gov/entrepre / Website of the World Festival. The labour of India-count y defeats at the Ri pp er of California Road.]
+```
+
+아기 이름으로 학습을 하면 어떨까?
+
+>
+Rudi Levette Berice Lussa Hany Mareanne Chrestina Carissy Mary len Hammine Janye Marlise Jacacrie Hendred Romand Charienna Nenotto Ette Dorane Wallen Marl y Darine Salina Elvyn Ersia Maralena Minoria Ellia Charmin Antle y Nerille Chelon Walmor Evena Jeryly Stachon Charisa Allisa Anatha Cathanie Geetra Alexie Jerin Cassen Herbett Cossie Velen Daurenge Robester Shermond Terisa Licia Roselen Ferine Jayn Lusine Charyanne Sales Sanny Resa Wallon Martine Merus Jelen Candica Wallin Tel Rachene Tarine Ozila Ketia Shanne Arnande Karella Roselina Alessia Chasty Deland Berther Geamar Jackein Mellisand Sagdy Nenc Lessie Rasey Guen Gavi Milea Anneda Margoris Janin Rodelin Zeanna Elyne Janah Ferzina Susta Pey Castina
+
+아마 예상했겠지만, GPT를 비롯한 많은 최신 모델들은 (2025.01기준) Transformer를 활용하여 대체하고 있다. Transformer는 attention mechanism을 가지고 있으며 적응적으로 관련있는 자료에 집중을 할 수 있다. 이 과정에서 recursive한 계산을 없애며, self-attnetion만을 활용하기 때문에 병렬화가 쉽게 가능하게 된다. 따라서 마스킹이 되어 있는 self-attention을 이용하여 augoregressive한 구조를 가지게 할 수 있다.
+
+### Pixel RNN
+
+앞선 RNN구조를 이미지 생성에도 적용한 사례가 있다. 이를 위해 픽셀간의 순서를 정해야 하는데, 픽셀을 raster scan order로 정의한다. 그러한 다음 각 픽셀의 조건부 확률은 3가지 컬러를 정의해야 하는데, $$p\left(x_{t} \mid x_{1: t-1}\right)$$ 다음과 같이 표현 가능하다.
+
+$$
+p\left(x_{t} \mid x_{1: t-1}\right)=p\left(x_{t}^{\text {red }} \mid x_{1: t-1}\right) p\left(x_{t}^{\text {green }} \mid x_{1: t-1}, x_{t}^{\text {red }}\right) p\left(x_{t}^{\text {blue }} \mid x_{1: t-1}, x_{t}^{\text {red }}, x_{t}^{\text {green }}\right)
+$$
+
+이러한 조건부 확률은 categorical 랜덤 변수로서 256개의 값을 표현해야 한다.
+
+RNN의 변형된 모델을 활용해서 조건부 확률을 표현하여서 LSTM과 MADE와 같은 masking을 적용하면 다음과 같다.
+
+[이미지]
+
+연쇄적으로 likelihood evaluation을 해야 하기 때문에 매우 느리다. 재미있는 점은 우리가 만든 모델은 생성 모델이기 때문에 가려진 부분에 대해 채워 넣기가 가능하다는 점이다.
+
+후속연구로 PixelCNN도 있는데, 이 구조는 convolutional neural network를 활용한다. 이 방법은 다음 픽셀을 표현하기 위해서 이전의 한 픽셀 하나만을 활용하는 것이 아니라 인접한 픽셀들에 대해 표현을 한다는 점이다.
+
+하지만 여전히 문제점은 존재한다. 
+
+생성한 이미지의 결과는 다음과 같다.
+
+[이미지]
+
+### Autoregressive Model 요약
+
+autoregressive model은 다음과 같이 요약된다.
+
+쉬운 샘플링
+1. $$\bar{x}_{0} \sim p\left(x_{0}\right)$$를 이용해 샘플을 얻는다.
+2. $$\bar{x}_{1} \sim p\left(x_{1} \mid x_{0}=\bar{x}_{0}\right)$$를 이용해 다음 샘플을 얻는다.
+3. 계속 반복한다.
+
+확률 $$p(x=\bar{x})$$ 을 쉽게 계산 가능하다
+1. $$p\left(x_{0}=\bar{x}_{0}\right)$$를 계산한다.
+2. $$p\left(x_{1}=\bar{x}_{1} \mid x_{0}=\bar{x}_{0}\right)$$를 계산한다.
+3. 곱한다. (로그의 합)
+4. 반복한다.
+5. 이상적으로는 이러한 계산을 모두 병렬로 하여 빠르게 계산할 수 있다.
+
+쉽게 연속변수로 확장이 가능하다 예를 들어 가우시안 확률 분포를 이용하면 다음과 같다.
+
+$$p\left(x_{t} \mid x_{<t}\right)=\mathcal{N}\left(\mu_{\theta}\left(x_{<t}\right), \Sigma_{\theta}\left(x_{<t}\right)\right)$$ 혹은 logistics의 mixture를 쓸 수 있다.
+
+다만, 자연스러운 방법으로 feature를 얻거나 point를 묶거나, 비지도 학습을 할 수 없다.
+
