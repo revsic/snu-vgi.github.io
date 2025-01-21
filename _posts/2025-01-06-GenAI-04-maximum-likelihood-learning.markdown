@@ -296,3 +296,8 @@ $$
 ### Empirical Risk and Overfitting
 
 [TBA]
+
+### 요약
+
+autoregressive model들에 대해 $$p_{\theta}(x)$$의 계산은 쉽다. 이상적으로는 RNN과 달리 각각의 조건부 확률 $$\log p_{\text {neural }}\left(x_{i}^{(j)} \mid \mathrm{x}_{<i}^{(j)} ; \theta_{i}\right)$$도 얻을 수 있다. 
+다만, 이러한 기법은 maximum likelihood와도 이어지고 더 큰 log-likelihood는 항상 더 좋아 보이는 샘플을 의미하는 것은 아니다. 다른 방식으로 유사도를 측정하는 방법도 있다. 예를 들면 Generative Adversarial Networks등이 있다. 
