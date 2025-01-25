@@ -179,7 +179,7 @@ $$
 
 따라서 $$\mathbf{z}^{(j)}$$를 선택하기 위한 좀 더 현명한 방법이 필요하다. 
 
-### 첫번째 시도: 중요도 샘플링
+### 두번째 시도: 중요도 샘플링
 
 우리는 일부만 보여진 데이터의 likelihood $$p_{\theta}(\mathbf{x})$$를 계산하는게 어렵다는 것을 잘 알고 잇다.
 
@@ -207,4 +207,117 @@ $$
 $$
 \mathbb{E}_{\mathbf{z}^{(1)} \sim q(\mathbf{z})}\left[\log \left(\frac{p_{\theta}\left(\mathbf{x}, \mathbf{z}^{(1)}\right)}{q\left(\mathbf{z}^{(1)}\right)}\right)\right] \neq \log \left(\mathbb{E}_{\mathbf{z}^{(1)} \sim q(\mathbf{z})}\left[\frac{p_{\theta}\left(\mathbf{x}, \mathbf{z}^{(1)}\right)}{q\left(\mathbf{z}^{(1)}\right)}\right]\right)
 $$
+
+$$
+\log \left(\sum_{\mathbf{z} \in \mathcal{Z}} p_{\theta}(\mathbf{x}, \mathbf{z})\right)=\log \left(\sum_{\mathbf{z} \in \mathcal{Z}} \frac{q(\mathbf{z})}{q(\mathbf{z})} p_{\theta}(\mathbf{x}, \mathbf{z})\right)=\log \left(\mathbb{E}_{\mathbf{z} \sim q(\mathrm{z})}\left[\frac{p_{\theta}(\mathbf{x}, \mathbf{z})}{q(\mathbf{z})}\right]\right)
+$$
+
+로그는 볼록함수이다. 
+
+$$
+\log \left(t x+(1-t) x^{\prime}\right) \geq t \log (x)+(1-t) \log \left(x^{\prime}\right)
+$$
+
+여기서 젠슨 부등식을 활용하면 다음을 알 수 있다.
+
+$$
+\log \left(\mathbb{E}_{\mathrm{z} \sim q(\mathrm{z})}[f(\mathrm{z})]\right)=\log \left(\sum_{\mathrm{z}} q(\mathrm{z}) f(\mathrm{z})\right) \geq \sum_{\mathrm{z}} q(\mathrm{z}) \log f(\mathrm{z})
+$$
+
+그렇다면 지금까지 유도한 수식을 정리해보자. 
+
+$$
+f(z)=\frac{p_{\theta}(\mathbf{x}, \mathbf{z})}{q(z)}
+$$
+
+를 사용하면 다음과 같아진다. 
+
+$$
+\log \left(\mathbb{E}_{\mathbf{z} \sim q(\mathrm{z})}\left[\frac{p_{\theta}(\mathbf{x}, \mathbf{z})}{q(\mathrm{z})}\right]\right) \geq \mathbb{E}_{\mathbf{z} \sim q(\mathrm{z})}\left[\log \left(\frac{p_{\theta}(\mathbf{x}, \mathbf{z})}{q(\mathbf{z})}\right)\right]
+$$
+
+이것은 **Evidence Lower Bound (ELBO)**라고 부른다.
+
+### Variational Inference
+
+만약 $$q(z)$$를 잠재변수 표현을 위한 임의의 확률 분포라고 가정하자.
+
+**Evidence Lower Bound (ELBO)**는 어떠한 $$q$$에 대해서도 성립한다.
+
+$$
+\begin{align}
+
+\log p(x;\theta) \geq & \sum_z q(z) \log\left(\frac{p_{\theta}(x, z)}{q(z)}\right)\\
+
+= & \sum_{z} q(z) \log p_\theta (x, z) ~\underbrace{- \sum_z q(z) \log q(z)}_{\mathrm{Entropy}~H(q)~\mathrm{of}~q}\\
+
+= & \sum_z q(z)\log p_\theta (x, z) + H(q)
+
+\end{align}
+$$
+
+여기서 $$q=p(z \vert x ; \theta)$$라면 다음이 성립한다.
+
+$$
+\log p(\mathrm{x} ; \theta)=\sum_{\mathrm{z}} q(\mathrm{z}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H(q)
+$$
+
+(첨언) 여기서 얻는 값은 우리가 EM 알고리즘에서 얻는 E 스텝과 같다. 
+
+이러한 bound는 tight하다. $$q(\mathrm{z})=p(\mathrm{z} \mid \mathrm{x} ; \theta)$$라면 바운드는 다음과 같다.
+
+$$
+\begin{align}
+
+\sum_z p(z | x; \theta) \log \frac{p(x, z; \theta)}{p(z | x ; \theta)} = & \sum p(z | x; \theta) \log \frac{p(z | x; \theta)p(x; \theta)}{p(z | x; \theta)}\\
+
+= & \sum_{{z}} p({z} | {x} ; \theta) \log p({x} ; \theta)\\
+
+= & \log p({x} ; \theta) \underbrace{\sum_{{z}} p({z} | {x} ; \theta)}_{=1} = \log p({x} ; \theta)
+
+\end{align}
+$$
+
+위의 수식은 이전의 가중치 반영 샘플링에 한가지 중요한 사실을 알려준다. **우리는 반드시 그럴싸 한 이미지 완성**을 선택해야 한다. 
+
+만약에 $$p(z | x ; \theta)$$가 계산하기 어렵다면 어떻게 해야 할까? 바운드가 얼마나 간격이 있을까?
+
+앞에서 $$q(z)$$가 어떠한 확률 분포도 가능하다고 정의했다. 약간의 선형대수를 사용하면 다음과 같다.
+
+$$
+D_{K L}(q(\mathrm{z}) \| p(\mathrm{z} | \mathrm{x} ; \theta)) = -\sum_{\mathrm{z}} q(\mathrm{z}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+\log p(\mathrm{x} ; \theta)-H(q) \geq 0
+$$
+
+식을 조정해서 다름과 같은 ELBO를 얻는다.
+
+$$
+\log p(\mathrm{x} ; \theta) \geq \sum_{\mathrm{z}} q(\mathrm{z}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H(q)
+$$
+
+여기서 $$q=p(\mathrm{z} \mid \mathrm{x} ; \theta)$$로 두면 $$D_{K L}\left(q(\mathrm{z}) \parallel p(\mathrm{z} | \mathrm{x} ; \theta)\right)=0$$이기 때문에 다음이 만족한다.
+
+$$
+\log p(\mathrm{x} ; \theta)=\sum_{\mathrm{z}} q(\mathrm{z}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H(q)
+$$
+
+일반적으로 다음을 만족한다.
+
+$$\log p(\mathrm{x} ; \theta)=\mathrm{ELBO}+D_{K L}\left(q(\mathrm{z}) \parallel p(\mathrm{z} | \mathrm{x} ; \theta)\right)$$
+
+즉 $$q(z)$$가 $$p(z \mid x ; \theta)$$에 가까울수록, ELBO는 정확한 log-likelihood에 점점 더 가까워진다.
+
+만약 사후확률 $$p(z | x ; \theta)$$이 계산하기 어렵다면 어떻게 해야 할까?
+$$q(\mathrm{z} ; \phi)$$가 계산이 유용한 확률 분포라고 가정해보자. 이 분포는 $$\phi$$로 표현이 되고, variational parameter로 표현한다.
+
+예를 들어 가우시안일 경우, 평균과 분산 행렬을 $$\phi$$를 통해 나타낸다.
+
+$$
+q(\mathrm{z} ; \phi)=\mathcal{N}\left(\phi_{1}, \phi_{2}\right)
+$$
+
+**variational inference**: $$q(z ; \phi)$$가 최대한 $$p(z | x ; \theta)$$가 가까워지는 $$\phi$$를 고른다. 
+
+[그림 삽입]
+
+그렇다면, 사후확률 $$p(z | x ; \theta)$$이 $$\mathcal{N}(2,2)$$ (오렌지색 확률 분포) 보다 $$\mathcal{N}(-4,0.75)$$ (초록색 확률 분포)로 좀 더 표현이 잘 됨을 알 수 있다.
 
