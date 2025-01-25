@@ -290,7 +290,7 @@ $$
 이제 Character RNN의 능력을 살펴보자. 3개의 레이어를 갖는 RNN을 512개의 숨겨진 노드들을 가지고 있는 네트워크를 활용하여 세익스피어의 문장들을 학습시켰다. 그런 다음 모델로 부터 샘플링 (생성)을 하면 다음과 같은 결과를 얻는다.
 
 >
-KING LEAR: O, if you were a feeble sight, the courtesy of your law,  Your sight and several breath, will wear the gods   With his heads, and my hands are wonder'd at the deeds, So drop upon your lordship's head, and your opinion Shall be against your honour.
+KING LEAR: O, if you were a feeble sight, the courtesy of your law, Your sight and several breath, will wear the gods  With his heads, and my hands are wonder'd at the deeds,So drop upon your lordship's head, and your opinionShall be against your honour.
 
 꽤나 그럴싸 한 문장이다. 한가지 고려할 점은 생성이 글자 단위로 일어난다는 점이다. 여기서 유효한 단어, 문법, 띄어쓰기등이 필요하다.
 
