@@ -280,12 +280,12 @@ $$
 
 위의 수식은 이전의 가중치 반영 샘플링에 한가지 중요한 사실을 알려준다. **우리는 반드시 그럴싸 한 이미지 완성**을 선택해야 한다. 
 
-만약에 $$p(z | x ; \theta)$$가 계산하기 어렵다면 어떻게 해야 할까? 바운드가 얼마나 간격이 있을까?
+만약에 $$p(z \vert x ; \theta)$$가 계산하기 어렵다면 어떻게 해야 할까? 바운드가 얼마나 간격이 있을까?
 
 앞에서 $$q(z)$$가 어떠한 확률 분포도 가능하다고 정의했다. 약간의 선형대수를 사용하면 다음과 같다.
 
 $$
-D_{K L}(q(\mathrm{z}) \| p(\mathrm{z} | \mathrm{x} ; \theta)) = -\sum_{\mathrm{z}} q(\mathrm{z}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+\log p(\mathrm{x} ; \theta)-H(q) \geq 0
+D_{K L}(q(\mathrm{z}) \vert p(\mathrm{z} | \mathrm{x} ; \theta)) = -\sum_{\mathrm{z}} q(\mathrm{z}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+\log p(\mathrm{x} ; \theta)-H(q) \geq 0
 $$
 
 식을 조정해서 다름과 같은 ELBO를 얻는다.
@@ -294,19 +294,19 @@ $$
 \log p(\mathrm{x} ; \theta) \geq \sum_{\mathrm{z}} q(\mathrm{z}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H(q)
 $$
 
-여기서 $$q=p(\mathrm{z} \mid \mathrm{x} ; \theta)$$로 두면 $$D_{K L}\left(q(\mathrm{z}) \parallel p(\mathrm{z} | \mathrm{x} ; \theta)\right)=0$$이기 때문에 다음이 만족한다.
+여기서 $$q=p(\mathrm{z} \mid \mathrm{x} ; \theta)$$로 두면 $$D_{K L}\left(q(\mathrm{z}) \parallel p(\mathrm{z} \vert \mathrm{x} ; \theta)\right)=0$$이기 때문에 다음을 만족한다.
 
 $$
 \log p(\mathrm{x} ; \theta)=\sum_{\mathrm{z}} q(\mathrm{z}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H(q)
 $$
 
-일반적으로 다음을 만족한다.
+**일반적으로 다음을 만족한다.**
 
 $$\log p(\mathrm{x} ; \theta)=\mathrm{ELBO}+D_{K L}\left(q(\mathrm{z}) \parallel p(\mathrm{z} | \mathrm{x} ; \theta)\right)$$
 
 즉 $$q(z)$$가 $$p(z \mid x ; \theta)$$에 가까울수록, ELBO는 정확한 log-likelihood에 점점 더 가까워진다.
 
-만약 사후확률 $$p(z | x ; \theta)$$이 계산하기 어렵다면 어떻게 해야 할까?
+만약 사후확률 $$p(z \vert x ; \theta)$$이 계산하기 어렵다면 어떻게 해야 할까?
 $$q(\mathrm{z} ; \phi)$$가 계산이 유용한 확률 분포라고 가정해보자. 이 분포는 $$\phi$$로 표현이 되고, variational parameter로 표현한다.
 
 예를 들어 가우시안일 경우, 평균과 분산 행렬을 $$\phi$$를 통해 나타낸다.
@@ -315,9 +315,28 @@ $$
 q(\mathrm{z} ; \phi)=\mathcal{N}\left(\phi_{1}, \phi_{2}\right)
 $$
 
-**variational inference**: $$q(z ; \phi)$$가 최대한 $$p(z | x ; \theta)$$가 가까워지는 $$\phi$$를 고른다. 
+**variational inference**: $$q(z ; \phi)$$가 최대한 $$p(z \vert x ; \theta)$$가 가까워지는 $$\phi$$를 고른다. 
 
 [그림 삽입]
 
-그렇다면, 사후확률 $$p(z | x ; \theta)$$이 $$\mathcal{N}(2,2)$$ (오렌지색 확률 분포) 보다 $$\mathcal{N}(-4,0.75)$$ (초록색 확률 분포)로 좀 더 표현이 잘 됨을 알 수 있다.
+그렇다면, 사후확률 $$p(z \vert x ; \theta)$$이 $$\mathcal{N}(2,2)$$ (오렌지색 확률 분포) 보다 $$\mathcal{N}(-4,0.75)$$ (초록색 확률 분포)로 좀 더 표현이 잘 됨을 알 수 있다.
 
+### 사후확률을 위한 variational approximation
+
+[그림 삽입]
+
+$$p\left(\mathrm{x}^{top}, \mathrm{x}^{bottom} ; \theta\right)$$ 확률을 숫자와 같은 이미지에게 높은 확률을 부여하는 분포라고 생각해보자. $$z=x^{top}$$는 보이지 않는 잠재적 변수이다.
+
+만약 $$q\left(\mathrm{x}^{top} ; \phi\right)$$으로 정의하고 계산이 쉬운 확률 분포라고 가정해보면, $$x^{top}$$은 variational parameter $$\phi$$로 표현이 가능하다. 
+
+$$
+q\left(x^{top} ; \phi\right)= \prod_{\mathrm{unobserved~variable~x_i^{top}}}\left(\phi_{i}\right)^{x_{i}^{top}}\left(1-\phi_{i}\right)^{\left(1-x_{i}^{top}\right)}
+$$
+
+다음 세가지 경우에 대해 생각해보자. 
+
+- $$\phi_{i}=0.5 \forall i$$이 좋은 $$p\left(x^{top} \mid x^{bottom} ; \theta\right)$$를 위한 좋은 추정일까?
+- $$\phi_{i}=1.0 \forall i$$이 좋은 $$p\left(x^{top} \mid x^{bottom} ; \theta\right)$$를 위한 좋은 추정일까?
+- $$\phi_{i} \approx 1$$이 숫자 9에 대한 좋은 추정값이라고 볼 수 있을까?
+
+세번째 답이 가장 정확한 답이다.
