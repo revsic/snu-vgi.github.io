@@ -70,3 +70,141 @@ $$
 - $$z$$를 샘플링하여 가우시안 혼합 요소 $$k$$를 고른다.
 - 선택된 가우시안으로 부터 데이터 포인트를 얻어낸다.
 
+문제는 이렇게 만든 카테고리 분포 + 가우시안 분포 기반의 생성 모델이 얼마나 잘 데이터셋의 분포를 잘 따르는지 확인하는 길이다. 이것을 **클러스터링** 관점에서 보면 사후확률 (posterior) $$p(z \mid x)$$는 데이터 $$x$$에 대해 가우시안 혼합 변수를 의미한다. **비지도 학습** 관점에서 본다면, 레이블이 없는 데이터에서 무언가를 배우기를 희망한다. 하지만 이런 문제는 ill-posed problem이 되기 때문에 직접 해결은 어렵다.
+
+[그림 삽입]
+
+예를 들어 손으로 쓴 숫자 (hand-written digits)를 비지도 군집화를 하게 되면 다음과 같은 결과를 볼 수 있다. 
+
+[그림 삽입]
+
+또다른 관점에서 우리가 만들고 있는 모델들을 보면, 간단한 가우시안 분포 하나로 부터 좀 더 복잡한 분포를 만들고 있음을 알 수 있다.
+
+$$
+p(\mathrm{x})=\sum_{\mathrm{z}} p(\mathrm{x}, \mathrm{z})=\sum_{\mathrm{z}} p(\mathrm{z}) p(\mathrm{x} \mid \mathrm{z})=\sum_{k=1}^{K} p(\mathrm{z}=k) \underbrace{\mathcal{N}\left(\mathrm{x} ; \mu_{k}, \Sigma_{k}\right)}_{\text {component }}
+$$
+
+### Variational Autoencoder
+
+무한개의 가우시안으로 표현을 해보면 어떨까?
+
+- 이전과 마찬가지로, $$\mathrm{z} \sim \mathcal{N}(0, I)$$를 정의한다.
+- $$p(x \mid z)=\mathcal{N}\left(\mu_{\theta}(z), \Sigma_{\theta}(z)\right)$$에서 $$\mu_{\theta}, \Sigma_{\theta}$$는 뉴럴 네트워크이다. 세부적으로는 다음과 같다.
+
+$$
+\begin{align}
+\mu_{\theta}(\mathrm{z})= &\sigma(A z+c)=\left(\sigma\left(a_{1} z+c_{1}\right), \sigma\left(a_{2} z+c_{2}\right)\right)= \left(\mu_{1}(z), \mu_{2}(z)\right)\\
+\Sigma_{\theta}(z) = &\operatorname{diag}(\exp(\sigma(Bz + d))) = \begin{pmatrix} \exp(\sigma(b_1z + d_1) & 0 \\ 0 & \exp(\sigma(b_2z + d_2))\end{pmatrix}\\
+\theta=& (A, B, c, d)
+\end{align}
+$$
+
+- 비록 $$p(\mathrm{x} \vert \mathrm{z})$$가 간단하지만, 주변 분포 $$p(\mathrm{x})$$는 매우 복잡하거나 유연한 분포를 표현할 수 있게 된다.
+
+
+### Recap
+
+정리해보면, 잠재적 변수 모델은 복잡한 분포 $$p(x)$$를 좀 더 간결한 빌딩 블록처럼 만들 수 있게 도와 준다. $$p(x \mid z)$$. 또한 비지도 학습과 관련이 되어 논리적으로 이치가 맞는다. (군집화, 비지도 표현 학습, 등)
+
+다만, 모든게 손쉽게 해결 되지는 않는다. 완전히 관측 가능한 상태의 autoregressive model 대비 훨씬 학습이 어려워진다.
+
+### Marginal Likelihood
+
+[이미지 삽입]
+
+만약 몇개의 픽셀 값이 학습시 보이지 않는다고 생각해보자. 위의 그림 참고. 그렇다면 $$X$$를 관측한 랜덤 변수라 정의하고, $$Z$$를 관측하지 않은 값 (숨겨진 변수 혹은 잠재적 변수)이라 칭하자. 그리고 우리가 다음과 같은 결합확률 분포를 만든다고 가정하자. 
+
+$$
+p(\mathrm{X}, \mathrm{Z} ; \theta)
+$$
+
+그렇다면 학습 데이터 $$\bar{x}$$로 부터 얻을 수 있는 확률 $$p(X=\bar{x} ; \theta)$$는 무엇이 될까?
+
+$$
+\sum_{\mathrm{z}} p(\mathrm{X}=\overline{\mathrm{x}}, \mathrm{Z}=\mathrm{z} ; \theta)=\sum_{\mathrm{z}} p(\overline{\mathrm{x}}, \mathrm{z} ; \theta)
+$$
+
+여기서 우리는 이미지를 완성하기 위해 가능한 모든 경우의 수를 생각해야 한다.
+
+앞에서 활용하였던 가우시안을 활용해 보자.
+
+- $$\mathrm{z} \sim \mathcal{N}(0, I)$$ 로 정의한다.
+- $$p(x \mid z)=\mathcal{N}\left(\mu_{\theta}(\mathrm{z}), \Sigma_{\theta}(\mathrm{z})\right)$$ 로 정의하고 $$\mu_{\theta}, \Sigma_{\theta}$$를 뉴럴 네트워크로 만들자.
+- $$\mathrm{Z}$$는 학습시 보이지 않는 변수이다.
+- 우리가 결합 확률 분포를 생각한다면, 학습 데이터 $$\overline{\mathrm{X}}$$에 대해 $$p(\mathrm{X}=\overline{\mathrm{X}} ; \theta)$$는 무엇이 될까?
+
+$$
+\int_{\mathrm{z}} p(\mathrm{X}=\overline{\mathrm{x}}, \mathrm{Z}=\mathrm{z} ; \theta) d \mathrm{z}=\int_{\mathrm{z}} p(\overline{\mathrm{x}}, \mathrm{z} ; \theta) d \mathrm{z}
+$$
+
+### 일부만 관측되는 데이터에 대해
+
+우리의 결합 확률 분포가 다음과 같다고 가정해보자.
+
+$$
+p(\mathrm{X}, \mathrm{Z} ; \theta)
+$$
+
+그러면 우리는 데이터 셋 $$\mathcal{D}$$이 있고, 각 데이터 샘플 $$X$$는 관측이 가능하다. 그리고 변수 $$Z$$는 관측이 불가능하다 (군집 혹은 군집의 번호 등) $$\mathcal{D}=\left\{\mathrm{x}^{(1)}, \cdots, \mathrm{x}^{(M)}\right\}$$
+
+여기서 maximum likelihood learning을 하면 다음과 같다.
+
+$$
+\log \prod_{\mathrm{x} \in \mathcal{D}} p(\mathrm{x} ; \theta)=\sum_{\mathrm{x} \in \mathcal{D}} \log p(\mathrm{x} ; \theta)=\sum_{\mathrm{x} \in \mathcal{D}} \log \sum_{\mathrm{z}} p(\mathrm{x}, \mathrm{z} ; \theta)
+$$
+
+**문제점** 여기서 값을 $$\log \sum_{z} p(x, z ; \theta)$$ 직접 계산하는 것은 불가능하다. 왜냐하면 이진 이미지라 할 지라도 $$\sum_{z} p(x, z ; \theta)$$ 를 계산하기 위해서는 변수가 가질 수 있는 모든 경우의 수를 고려하여야 하고, 이것으로 인해, $$2^{30}$$번 만큼의 합을 해야 하기 때문이다.
+랜덤 변수가 연속 변수일지라도 마찬가지이다. $$\log \int_{z} p(x, z ; \theta) d z$$를 직접 게산하는것은 불가능하다. 그리고 이런 경우 그래디언트 $$\nabla_{\theta}$$를 계산하는 것도 매우 어렵다.
+
+그렇다면 어떤 방법을 쓰는 것이 좋을까? **추정**이 필요하다. 만일 데이터 샘플 하나 $$x \in \mathcal{D}$$로 부터 그래디언트를 계산한다면 어떨까? 물론 추정 기법은 매우 가볍고 계산하기 편해야 할 것이다.
+
+### 첫번째 시도: 순진한 몬테카를로
+
+우리는 likelihood 함수 $$p_{\theta}(\mathbf{x})$$가 일부만 보여진 데이터에 대해 계산하기 어렵다는 것을 잘 알고 있다.
+
+$$
+p_{\theta}(\mathbf{x})=\sum_{\text {All values of } \mathbf{z}} p_{\theta}(\mathbf{x}, \mathbf{z})=|\mathcal{Z}| \sum_{\mathbf{z} \in \mathcal{Z}} \frac{1}{|\mathcal{Z}|} p_{\theta}(\mathbf{x}, \mathbf{z})=|\mathcal{Z}| \mathbb{E}_{\mathbf{z} \sim \operatorname{Uniform}(\mathcal{Z})}\left[p_{\theta}(\mathbf{x}, \mathbf{z})\right]
+$$
+
+그렇다면, 사용이 가능할만한 기대값을 생각할 수 있다. 몬테카를로 기법을 써보자.
+
+- 랜덤으로 $$\mathbf{z}^{(1)}, \cdots, \mathbf{z}^{(k)}$$ 변수를 추출한다.
+- 샘플의 평균으로 기대값을 **추정**한다.
+
+$$
+\sum_{\mathbf{z}} p_{\theta}(\mathbf{x}, \mathbf{z}) \approx|\mathcal{Z}| \frac{1}{k} \sum_{j=1}^{k} p_{\theta}\left(\mathbf{x}, \mathbf{z}^{(j)}\right)
+$$
+
+위의 방법은 이론적으로는 작동하지만, 실제로는 그렇지 않다. 대부분의 $$z$$에 대해서 $$p_{\theta}(\mathbf{x}, z)$$가 극도로 낮기 때문이다. (대부분의 이미지를 채워 넣은 경우가 실제 이미지와는 거리가 멀 것이다.) 몇개는 값이 클 수 있지만, 절대로 정확한 완성을 균등 분포함수로는 맞출 수 없을 것이기 때문이다. 
+
+따라서 $$\mathbf{z}^{(j)}$$를 선택하기 위한 좀 더 현명한 방법이 필요하다. 
+
+### 첫번째 시도: 중요도 샘플링
+
+우리는 일부만 보여진 데이터의 likelihood $$p_{\theta}(\mathbf{x})$$를 계산하는게 어렵다는 것을 잘 알고 잇다.
+
+$$
+p_{\theta}(\mathbf{x})=\sum_{\text {All possible values of } \mathbf{z}} p_{\theta}(\mathbf{x}, \mathbf{z})=\sum_{\mathbf{z} \in \mathcal{Z}} \frac{q(\mathbf{z})}{q(\mathbf{z})} p_{\theta}(\mathbf{x}, \mathbf{z})=\mathbb{E}_{\mathbf{z} \sim q(\mathrm{z})}\left[\frac{p_{\theta}(\mathbf{x}, \mathbf{z})}{q(\mathbf{z})}\right]
+$$
+
+몬테카를로를 다시 활용해보자.
+
+- 이번에는 샘플 $$\mathbf{z}^{(1)}, \cdots, \mathbf{z}^{(k)}$$를 $$q(\mathbf{z})$$에서 얻는다. (중요도 샘플링이다.)
+- 샘플의 평균을 이용해 기대값을 계산한다.
+
+$$
+p_{\theta}(\mathbf{x}) \approx \frac{1}{k} \sum_{j=1}^{k} \frac{p_{\theta}\left(\mathbf{x}, \mathbf{z}^{(j)}\right)}{q\left(\mathbf{z}^{(j)}\right)}
+$$
+
+그렇다면 $$q(\mathrm{z})$$를 위한 좋은 선택은 무엇일까. 직관적으로는 그럴듯한 완성을 하면 될 것이다. 그렇다면 log-likelihood를 다음과 같이 계산한다.
+
+$$
+\log \left(p_{\theta}(\mathbf{x})\right) \approx \log \left(\frac{1}{k} \sum_{j=1}^{k} \frac{p_{\theta}\left(\mathbf{x}, \mathbf{z}^{(j)}\right)}{q\left(\mathbf{z}^{(j)}\right)}\right){\approx} \log \left(\frac{p_{\theta}\left(\mathbf{x}, \mathbf{z}^{(1)}\right)}{q\left(\mathbf{z}^{(1)}\right)}\right)
+$$
+
+하지만, 아래와 같음이 자명하다.
+
+$$
+\mathbb{E}_{\mathbf{z}^{(1)} \sim q(\mathbf{z})}\left[\log \left(\frac{p_{\theta}\left(\mathbf{x}, \mathbf{z}^{(1)}\right)}{q\left(\mathbf{z}^{(1)}\right)}\right)\right] \neq \log \left(\mathbb{E}_{\mathbf{z}^{(1)} \sim q(\mathbf{z})}\left[\frac{p_{\theta}\left(\mathbf{x}, \mathbf{z}^{(1)}\right)}{q\left(\mathbf{z}^{(1)}\right)}\right]\right)
+$$
+
