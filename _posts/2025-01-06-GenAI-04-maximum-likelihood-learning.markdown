@@ -204,7 +204,7 @@ $$P_{\theta}(x=T)=1-\theta$$
 
 그러면 가지고 있는 데이터셋을 가지고 likelihood를 표현하면 다음과 같다. 
 
-$$=\prod_{i} P_{\theta}\left(x_{i}\right)=\theta \times \theta \times(1-\theta) \times \theta \times(1-\theta)$$
+$$L(\theta)=\prod_{i} P_{\theta}\left(x_{i}\right)=\theta \times \theta \times(1-\theta) \times \theta \times(1-\theta)$$
 
 [그림]
 
@@ -214,16 +214,16 @@ $$=\prod_{i} P_{\theta}\left(x_{i}\right)=\theta \times \theta \times(1-\theta) 
 
 $$
 \begin{aligned}
-L(\theta) & =\theta^{\# \text {heads }} \times(1-\theta)^{\# \text { tails }} \\
-\log L(\theta) & =\log \left(\theta^{\# \text { heads }} \times(1-\theta)^{\# \text { tails }}\right) \\
-& =\# \text { heads } \times \log (\theta)+\# \text { tails } \times \log (1-\theta)
+L(\theta) & =\theta^{\# \text {heads}} \times(1-\theta)^{\# \text {tails}} \\
+\log L(\theta) & =\log \left(\theta^{\# \text {heads}} \times(1-\theta)^{\# \text {tails}}\right) \\
+& =\# \text {heads} \times \log (\theta)+\# \text {tails} \times \log (1-\theta)
 \end{aligned}
 $$
 
 이제 MLE의 목표는 $$\log L\left(\theta^{*}\right)$$를 최대화하는 값 $$\theta^{*} \in[0,1]$$를 찾는 것이다. 이제 $$\theta$$에 대해 미분하고, 미분한 값을 0으로 두면, 다음을 얻는다. 
 
 $$
-\theta^{*}=\frac{\# \text { heads }}{\# \text { heads }+\# \text { tails }}
+\theta^{*}=\frac{\# \text {heads}}{\# \text {heads}+\# \text {tails}}
 $$
 
 ### MLE 아이디어를 autoregressive models로 확장하기
