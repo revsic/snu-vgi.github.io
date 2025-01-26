@@ -340,3 +340,75 @@ $$
 - $$\phi_{i} \approx 1$$이 숫자 9에 대한 좋은 추정값이라고 볼 수 있을까?
 
 세번째 답이 가장 정확한 답이다.
+
+### The Evidence Lower bound
+
+앞서 언급한 ELBO에 대해 살펴보자.
+
+[ELBO 그림 삽입]
+
+$$
+\begin{align}
+
+\log p(x; \theta) \geq & \sum_z q(z; \phi) \log p(z, x;\theta) + H\left(q(z; \phi)\right) = \underbrace{\mathcal{L}(x;\theta, \phi)}_{\mathrm{ELBO}}\\
+
+= & \mathcal{L}(\mathrm{x} ; \theta, \phi)+D_{K L}\left(q(\mathrm{z} ; \phi) \parallel p(\mathrm{z} | \mathrm{x} ; \theta)\right)
+
+
+\end{align}
+$$
+
+더 좋은 $$q(z ; \phi)$$는 사후확률 $$p(z \vert x ; \theta)$$을 추정할 수 있고, 더 작은 $$D_{K L}\left(q(\mathrm{z} ; \phi) \parallel p(\mathrm{z} \vert \mathrm{x} ; \theta)\right)$$를 만들 수 있다. 우리는 더 작은 ELBO가 $$\log p(x ; \theta)$$가 됨을 알 수 있다.
+
+그렇다면, 동시에 $$\theta$$와 $$\phi$$를 어떻게 최적화하여 주어진 데이터셋에 대해서 ELBO를 최대화 할 수 있을까?
+
+### 중간 정리
+
+지금까지 우리는 잠재 변수를 정의 했다. 
+
+$$
+p(x) \rightarrow p(x \mid z) \rightarrow p(x \mid z ; \theta)
+$$
+
+$$
+p(x) \rightarrow p(x , z) \rightarrow p(x , z ; \theta)
+$$
+
+여기서 $$\sum_{\mathrm{x} \in \mathcal{D}} \log \sum_{\mathrm{z}} p(\mathrm{x}, \mathrm{z} ; \theta)$$ 를 얻기란 쉽지 않다. 
+
+따라서 중요도 샘플링에 대해 제안하였고, ELBO를 정의하게 되었다. 
+
+$$
+\log p(\mathrm{x} ; \theta)=\sum_{\mathrm{z}} q(\mathrm{z}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H(q)
+$$
+
+만약 $$p(z \mid x ; \theta)$$가 계산이 어렵다면? $$q(\mathrm{z} ; \phi)$$를 계산하기 쉽게 만들면 된다.
+
+### Variational learning
+
+[그림]
+
+다시 정리해보면, $$\mathcal{L}\left(\mathrm{x} ; \theta, \phi_{1}\right)$$와 $$\mathcal{L}\left(\mathrm{x} ; \theta, \phi_{2}\right)$$는 둘 다 lower bound이고, 우리는 이 수식을 $$\theta$$와 $$\theta$$로 동시에 최적화를 수행하려 한다.
+
+이제 이 아이디어를 전체 데이터셋으로 확장하면 된다.
+
+ELBO는 어떠한 $$q(z; \phi)$$에 대해서도 만족한다.
+
+$$
+\log p(\mathrm{x} ; \theta) \geq \sum_{\mathrm{z}} q(\mathrm{z} ; \phi) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H(q(\mathrm{z} ; \phi))=\underbrace{\mathcal{L}(\mathrm{x} ; \theta, \phi)}_{\mathrm{ELBO}}
+$$
+
+따라서 전체 데이터셋에 대해서 maximal likelihood learning을 확장하면 다음과 같다.
+
+$$
+\ell(\theta ; \mathcal{D})=\sum_{x^{i} \in \mathcal{D}} \log p\left(x^{i} ; \theta\right) \geq \sum_{x^{i} \in \mathcal{D}} \mathcal{L}\left(x^{i} ; \theta, \phi^{i}\right)
+$$
+
+따라서,
+
+$$
+\max _{\theta} \ell(\theta ; \mathcal{D}) \geq \max _{\theta, \phi^{1}, \cdots, \phi^{M}} \sum_{x^{i} \in \mathcal{D}} \mathcal{L}\left(x^{i} ; \theta, \phi^{i}\right)
+$$
+
+여기서 우리는 다른 variational 파라미터 $$\phi^{i}$$를 모든 데이터 샘플 $$x^{i}$$에 대해 사용하게 된다. 그 이유는 우리가 진짜 사후확률 $$p\left(z \mid x^{i} ; \theta\right)$$이 각각의 데이터 포인트 $$x^{i}$$에 대해 다르기 때문이다.
+
