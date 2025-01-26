@@ -412,3 +412,88 @@ $$
 
 여기서 우리는 다른 variational 파라미터 $$\phi^{i}$$를 모든 데이터 샘플 $$x^{i}$$에 대해 사용하게 된다. 그 이유는 우리가 진짜 사후확률 $$p\left(z \mid x^{i} ; \theta\right)$$이 각각의 데이터 포인트 $$x^{i}$$에 대해 다르기 때문이다.
 
+### Learning via stochastic variational inference (SVI)
+
+이제 우리는 $$\sum_{x^{i} \in \mathcal{D}} \mathcal{L}\left(x^{i} ; \theta, \phi^{i}\right)$$를 하나의 함수로서 $$\theta, \phi^{1}, \cdots, \phi^{M}$$ 를 하나의 stochastic gradient descent를 구하게 된다.
+
+$$
+\begin{aligned}
+\mathcal{L}\left(\mathrm{x}^{i} ; \theta, \phi^{i}\right) & =\sum_{\mathrm{z}} q\left(\mathrm{z} ; \phi^{i}\right) \log p\left(\mathrm{z}, \mathrm{x}^{i} ; \theta\right)+H\left(q\left(\mathrm{z} ; \phi^{i}\right)\right) \\
+& =E_{q\left(\mathrm{z} ; \phi^{i}\right)}\left[\log p\left(\mathrm{z}, \mathrm{x}^{i} ; \theta\right)-\log q\left(\mathrm{z} ; \phi^{i}\right)\right]
+\end{aligned}
+$$
+
+이러한 최적화 과정은 다음 과정을 통해 수행된다.
+
+- $$\theta, \phi^{1}, \cdots, \phi^{M}$$를 초기화한다.
+- 데이터 포인트 $$x^{i}$$를 데이터셋 $$\mathcal{D}$$로 부터 얻는다.
+- $$\phi^{i}$$의 함수 $$\mathcal{L}\left(x^{i} ; \theta, \phi^{i}\right)$$를 최적화 한다.
+    - $$\phi^{i}=\phi^{i}+\eta \nabla_{\phi^{i}} \mathcal{L}\left(\mathrm{x}^{i} ; \theta, \phi^{i}\right)$$를 반복한다.
+    - $$\phi^{i, *} \approx \arg \max _{\phi} \mathcal{L}\left(x^{i} ; \theta, \phi\right)$$가 수렴할때까지 반복한다.
+- $$\nabla_{\theta} \mathcal{L}\left(x^{i} ; \theta, \phi^{i, *}\right)$$를 계산한다.
+- $$\theta$$를 업데이트한다. 그런 다음 두번째 단계로 간다.
+    - graident를 어떻게 계산하는가? 기대값을 계산하기에 정확한 다읍은 없기에 우리는 몬테카를로 샘플링을 한다.
+
+### Learning Deep Generative Models
+
+다시 정리해보면 
+
+$$
+\begin{aligned}
+\mathcal{L}(\mathrm{x} ; \theta, \phi) & =\sum_{\mathrm{z}} q(\mathrm{z} ; \phi) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H(q(\mathrm{z} ; \phi)) \\
+& =E_{q(\mathrm{z} ; \phi)}[\log p(\mathrm{z}, \mathrm{x} ; \theta)-\log q(\mathrm{z} ; \phi)]
+\end{aligned}
+$$
+
+여기서 $$\phi^i$$의 superscript $$i$$는 제거하였다.
+
+바운드를 계산하기 위해서 $$z^1, \cdots , z^k$$를 $$q(z;\phi)$$로 부터 샘플링 하고, 아래를 추정한다.
+
+$$
+E_{q(\mathrm{z} ; \phi)}\left[\log p(\mathrm{z}, \mathrm{x} ; \theta)-\log q(\mathrm{z} ; \phi)\right]
+\approx \frac{1}{k}\sum_k \left( \log p(z^k,x;\theta)-\log q(z^k; \phi)\right)
+$$
+
+여기서 중요한 것은 $$q(z; \phi)$$이 계산 가능하다는 점이다. 즉 쉽게 샘플링하고 계산할 수 있는 분포이다.
+
+우리가 $$\nabla_{\theta} \mathcal{L}(\mathrm{x} ; \theta, \phi)$$와 $$\nabla_{\phi} \mathcal{L}(\mathrm{x} ; \theta, \phi)$$를 계산할 수 있다면, gradient를 $$\theta$$에 대해 계산하는 것은 쉽다. 
+
+$$
+\begin{align}
+\nabla_\theta E_{q(\mathrm{z} ; \phi)}[\log p(\mathrm{z}, \mathrm{x} ; \theta)-\log q(\mathrm{z} ; \phi)] 
+= & E_{q(z;\phi)}\left[\nabla_\theta \log p(z,x;\theta)\right] \\
+\approx & \frac{1}{k}\sum_k \nabla_\theta \log p(z^k, x; \theta)
+\end{align}
+$$
+
+다만 $$\phi$$에 대한 graident를 계산하는것은 기대값이 $$\phi$$에 의존하기 때문에 좀 더 복잡하다. 하지만 우리는 여전이 몬테카를로 평균을 위해 추정을 하고 싶다. 현재로서는 더 좋지만 덜 일반화 가능한 기법은 연속 변수 $$z$$에 대해서 혹은 특정 분포에 대해서만 작동한다.
+
+### Reparametrization
+
+앞에서 언급한대로 $$\phi$$에 대한 graidient를 계산해보자.
+
+$$
+E_{q(\mathrm{z} ; \phi)}[r(\mathrm{z})]=\int q(\mathrm{z} ; \phi) r(\mathrm{z}) d \mathrm{z}
+$$
+
+이제 $$\mathrm{z}$$는 연속 랜덤 변수이다.
+
+만약, $$q(\mathrm{z} ; \phi)=\mathcal{N}\left(\mu, \sigma^{2} I\right)$$가 가우시안이면서 파라미터 $$\phi=(\mu, \sigma)$$와 관련이 있다면 이것들은 샘플링을 다음과 같이 하는것과 같다.
+
+$$\mathrm{z} \sim q_{\phi}(\mathrm{z})$$를 샘플링하고, $$\epsilon \sim \mathcal{N}(0, I), \mathrm{z}=\mu+\sigma \epsilon=g(\epsilon ; \phi)$$를 샘플링 하자. 그러면 아래 등식을 이용해 기대값을 두가지로 계산할 수 있다.
+
+$$
+\begin{align}
+E_{z\sim q(z;\phi)}[r(z)] = & E_{\epsilon\sim\mathcal{N}(0, I)}[r(g(\epsilon;\phi))] = \int p(\epsilon)r(\mu + \sigma\epsilon)d\epsilon\\
+\nabla_\phi E_{q(z;\phi)}[r(z)] = & \nabla_\phi E_\epsilon [r(g(\epsilon; \phi))] = E_\epsilon [\nabla_\phi r(g(\epsilon; \phi))]
+\end{align}
+$$
+
+여기서 $$r$$과 $$g$$가 $$\phi$$에 대해 미분 가능하고, $$\epsilon$$가 샘플링이 쉬워진다면, 몬테카를로 추정이 쉬워진다. 
+
+$$
+E_{\epsilon}\left[\nabla_{\phi} r(g(\epsilon ; \phi))\right] \approx \frac{1}{k} \sum_{k} \nabla_{\phi} r\left(g\left(\epsilon^{k} ; \phi\right)\right)
+\text{, where }
+\epsilon^{1}, \cdots, \epsilon^{k} \sim \mathcal{N}(0, I)
+$$
+보통 이러한 기법은 REINFORCE보다는 훨씬 적은 variance를 가지게 된다.
