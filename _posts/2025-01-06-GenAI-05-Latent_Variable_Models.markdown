@@ -497,3 +497,147 @@ E_{\epsilon}\left[\nabla_{\phi} r(g(\epsilon ; \phi))\right] \approx \frac{1}{k}
 \epsilon^{1}, \cdots, \epsilon^{k} \sim \mathcal{N}(0, I)
 $$
 보통 이러한 기법은 REINFORCE보다는 훨씬 적은 variance를 가지게 된다.
+
+이제 우리의 원래 수식을 살펴보자
+
+$$
+\begin{aligned}
+\mathcal{L}(\mathrm{x} ; \theta, \phi) & =\sum_{\mathrm{z}} q(\mathrm{z} ; \phi) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H(q(\mathrm{z} ; \phi)) \\
+& =E_{q(\mathrm{z} ; \phi)}[\underbrace{\log p(\mathrm{z}, \mathrm{x} ; \theta)-\log q(\mathrm{z} ; \phi)}_{r(\mathrm{z}, \phi)}]
+\end{aligned}
+$$
+
+이 수식에서 우리는 $$E_{q(z ; \phi)}[r(z)]$$ 수식 대신, $$E_{q(\mathrm{z} ; \phi)}[r(\mathrm{z}, \phi)]$$를 가지고 있기 때문에 우리의 조건은 좀 더 복잡하다. 수식 안에서 기대값은 또한 $$\phi$$에 의존하고 있다.
+
+여기서 우리는 여전히 reparameterization을 쓸 수 있다. 만약 $$\mathrm{z}=\mu+\sigma \epsilon=g(\epsilon ; \phi)$$이라 가정하면, 다음과 같다.
+
+$$
+\begin{aligned}
+E_{q(\mathrm{z} ; \phi)}[r(\mathrm{z}, \phi)] & =E_{\epsilon}[r(g(\epsilon ; \phi), \phi)] \\
+& \approx \frac{1}{k} \sum_{k} r\left(g\left(\epsilon^{k} ; \phi\right), \phi\right)
+\end{aligned}
+$$
+
+### Amortized Inference
+
+지금까지 우리는 다양한 셋의 variational parameter들 $$\phi^{i}$$의 각각 데이터 샘플 $$x^{i}$$에 대해 구해왔지만, 이러한 기법은 단순히 큰 데이터셋에 대해 확장하기 어렵다.
+
+$$
+\max _{\theta} \ell(\theta ; \mathcal{D}) \geq \max _{\theta, \phi^{1}, \cdots, \phi^{M}} \sum_{x^{i} \in \mathcal{D}} \mathcal{L}\left(x^{i} ; \theta, \phi^{i}\right)
+$$
+
+**Amortization**: 이제 우리는 파라미터를 가지는 **하나의 함수** $$f_{\lambda}$$를 가지고 있다고 생각하자. 그 함수는 각각의 $$x$$를 좋은 variational 파라미터로 매핑한다. 마치 regression을 하는 것과 같다.
+
+$$x^{i} \mapsto \phi^{i, *}$$
+
+예를 들어 $$q\left(z \mid x^{i}\right)$$가 다양한 평균 $$\mu^{1}, \cdots, \mu^{m}$$을 가지는 가우시안 함수라고 가정해보자. 그렇다면 우리는 하나의 인공 신경망 $$f_{\lambda}$$이 $$x^{i}$$에서 $$\mu^{i}$$로 가는 함수를 배우게 되는 것이다. 
+
+이렇게 하면 우리는 사후확률 $$q\left(\mathrm{z} \mid \mathrm{x}^{i}\right)$$을 $$q_{\lambda}(\mathrm{z} \mid \mathrm{x})$$를 이용해서 추정할 수 있게 된다.
+
+### A variational approximation to the posterior
+
+[이진 영상 사진]
+
+만약 $$p\left(z, x^{i} ; \theta\right)$$가 $$p_{\text {data }}\left(z, x^{i}\right)$$에 가깝다고 가정을 해보자. 그리고 잠재변수 $$z$$가 숫자, 스타일, 레벨과 같은 정보를 내재하고 있다고 가정해보자.
+
+여기서 $$q\left(\mathrm{z} ; \phi^{i}\right)$$가 변수 $$z$$와 파라미터 $$\phi^{i}$$에 대해 계산하기 쉬운 (tractable)한 확률 분포라고 가정하자.
+
+그렇다면 우리는 아래의 두가지 옵션을 가지게 된다.
+
+- 각각의 데이터 샘플 $$x^{i}$$에 대해 $$\phi^{i, *}$$를 찾는다. (최적화를 이용할 수 있으나 매우 비싼 연산이다)
+- 방금 배운 **Amortized inference**를 수행: 데이터 $$x^{i}$$가 좋은 파라미터의 집합 $$\phi^{i}$$으로 매핑할 수 있는 함수를 $$q\left(z ; f_{\lambda}\left(x^{i}\right)\right)$$를 이용해 구한다. $$f_{\lambda}$$는 최적화 문제를 어떻게 풀지를 알려준다.
+
+참로고 $$q\left(z ; f_{\lambda}\left(x^{i}\right)\right)$$는 $$q_{\phi}(z \mid x)$$로도 표현된다.
+
+이제 amortized inference를 이용해 학습을 해보자.
+
+$$\sum_{x^{i} \in \mathcal{D}} \mathcal{L}\left(x^{i} ; \theta, \phi\right)$$를 $$\theta, \phi$$의 함수로 생각하여 stochastic gradient descent를 최적화 해보자. 
+
+$$
+\begin{aligned}
+\mathcal{L}(\mathrm{x} ; \theta, \phi) & =\sum_{\mathrm{z}} q_{\phi}(\mathrm{z} | \mathrm{x}) \log p(\mathrm{z}, \mathrm{x} ; \theta)+H\left(q_{\phi}(\mathrm{z} | \mathrm{x})\right) \\
+& \left.=E_{q_{\phi}(\mathrm{z} | \mathrm{x})}\left[\log p(\mathrm{z}, \mathrm{x} ; \theta)-\log q_{\phi}(\mathrm{z} | \mathrm{x})\right)\right]
+\end{aligned}
+$$
+
+그렇다면 다음과 같은 단계를 생각해보자.
+
+- $$\theta^{(0)}, \phi^{(0)}$$를 초기화 한다.
+- 데이터 포인트 $$x^{i}$$를 데이터셋으로 부터 $$\mathcal{D}$$를 랜덤으로 샘플링 한다.
+- $$\nabla_{\theta} \mathcal{L}\left(x^{i} ; \theta, \phi\right)$$와 $$\nabla_{\phi} \mathcal{L}\left(x^{i} ; \theta, \phi\right)$$를 계산한다.
+- gradient 방향으로 $$\theta, \phi$$로 업데이트 한다.
+
+그래디언트는 어떻게 계산할까? 이전에 배운 reparameterization을 쓰면 된다.
+
+$$
+\begin{aligned}
+\mathcal{L}(\mathrm{x} ; \theta, \phi) & \left.=E_{q_{\phi}(\mathrm{z} \mid \mathrm{x})}\left[\log p(\mathrm{z}, \mathrm{x} ; \theta)-\log q_{\phi}(\mathrm{z} \mid \mathrm{x})\right)\right] \\
+& \left.=E_{q_{\phi}(\mathrm{z} \mid \mathrm{x})}\left[\log p(\mathrm{z}, \mathrm{x} ; \theta)-\log p(\mathrm{z})+\log p(\mathrm{z})-\log q_{\phi}(\mathrm{z} \mid \mathrm{x})\right)\right] \\
+& =E_{q_{\phi}(\mathrm{z} \mid \mathrm{x})}[\log p(\mathrm{x} \mid \mathrm{z} ; \theta)]-D_{K L}\left(q_{\phi}(\mathrm{z} \mid \mathrm{x}) \| p(\mathrm{z})\right)
+\end{aligned}
+$$
+
+다시 정리해보면, 
+
+- 데이터 포인트 $$x^{i}$$를 얻는다.
+- $$\hat{z}$$ 가 $$q_{\phi}\left(z \mid x^{i}\right)$$로 매핑되도록 한다. (**인코더**에 해당한다)
+- $$\hat{x}$$를 $$p(x \mid \hat{z} ; \theta)$$로 부터 복원한다. (**디코더**에 해당한다)
+
+그렇다면 트레이닝 함수 $$\mathcal{L}(\mathrm{x} ; \theta, \phi)$$는 무엇을 할까? 
+- 첫번째 항은 $$\hat{x} \approx x^{i}$$가 되는 것을 장려한다. ($$x^i$$가 $$p(x \mid \hat{z} ; \theta)$$에서 높도록 한다.) 
+- 두번째 항은 $$\hat{z}$$가 $$p(z)$$항에서 높도록 한다.
+
+### Learning Deep Generative models
+
+이제 간단한 사례를 이용하여 지금까지 논의한 내용을 정리해보자.
+
+- Alice가 우주 미션에 참여하게 되어서 이미지를 Bob에게 전달해야 한다. 이미지 $$x^{i}$$가 있을때, Alice는 이미지를 $$\hat{z} \sim q_{\phi}\left(z \mid x^{i}\right)$$를 이용해 압축을 하여 메시지 $$\hat{z}$$를 얻게 되고, 이를 Bob에게 전달한다.
+- Bob는 $$\hat{z}$$를 가지고 $$p(x \mid \hat{z} ; \theta)$$를 이용해 원래의 이미지를 복원하려고 한다. 
+    - 이러한 전략은 $$E_{q_{\phi}(\mathrm{z} \mid \mathrm{x})}[\log p(\mathrm{x} \mid \mathrm{z} ; \theta)]$$가 크다면 잘 작동할 것이다.
+    - 수식 $$D_{K L}\left(q_{\phi}(\mathrm{z} \mid \mathrm{x}) \| p(\mathrm{z})\right)$$는 메시지에 대한 분포가 특별한 형태 $$p(z)$$가 되도록 강제한다. 만약 Bob가 $$p(z)$$에 대해 알고 있다면, Bob는 진짜같은 메시지를 $$\hat{z} \sim p(z)$$를 통해 얻을 수 있고, 이에 맞는 이미지도 생성할 수 있다. 마치 Alice에게 얻었던 것처럼 말이다.
+
+### Summary of Latent Variable Models
+
+지금까지 내용을 정리해보자.
+
+- 간단한 모델을 결합하여 좀 더 유연한 기법을 만들 수 있다. (예를 들어 가우시안 합성 모델 처럼)
+- Directed 모델은 ancesteral 샘플링을 가능하게 한다. (효율적인 생성이 가능하도록): $$\mathrm{z} \sim p(\mathrm{z}), \mathrm{x} \sim p(\mathrm{x} \mid \mathrm{z} ; \theta)$$
+- 하지만, log-likelihood는 일반적으로 계산이 어렵다 (intractable), 따라서 학습은 어렵다.
+- 모델 파라미터 $$(\theta)$$와 amortized inference component $$(\phi)$$는 ELBO최적화를 위해 계산 유용성을 향상시킨다.
+- $$x$$를 위한 잠재적 표현은 $$q_{\phi}(\mathrm{z} \mid \mathrm{x})$$를 이용해서 얻을 수 있게 된다.
+
+### 연구의 방향
+
+따라서, 정리하자면, variational learning을 다음과 같이 올리는 것이 적절할 것이다.
+
+- 더 좋은 최적화 기술
+- 더 표현이 가능한 추정 기법들
+- 대체할 수 있는 손실 함수
+
+### 관련 연구들
+
+**Model families - Encoder**
+
+Amortization (Gershman & Goodman, 2015; Kingma; Rezende; ..)
+- Scalability: Efficient learning and inference on massive datasets
+- Regularization effect: Because of joint training, it also implicitly regularizes the model ￼ (Shu et al., 2018)
+
+Augmenting variational posteriors
+- Monte Carlo methods: Importance Sampling (Burda et al., 2015), MCMC (Salimans et al., 2015, Hoffman, 2017, Levy et al., 2018), Sequential Monte Carlo (Maddison et al., 2017, Le et al., 2018, Naesseth et al., 2018), Rejection Sampling (Grover et al., 2018)
+- Normalizing flows (Rezende & Mohammed, 2015, Kingma et al., 2016) 
+
+**Model families - Decoder**
+
+- Powerful decoders ￼ such as DRAW (Gregor et al., 2015), PixelCNN (Gulrajani et al., 2016)
+- Parameterized, learned priors ￼ (Nalusnick et al., 2016, Tomczak & Welling, 2018, Graves et al., 2018) 
+
+**Variational objectives**
+
+Tighter ELBO does not imply:
+
+- Better samples: Sample quality and likelihoods are uncorrelated (Theis et al., 2016)
+- Informative latent codes: Powerful decoders can ignore latent codes due to tradeoff in minimizing reconstruction error vs. KL prior penalty (Bowman et al., 2015, Chen et al., 2016, Zhao et al., 2017, Alemi et al., 2018)
+
+Alternatives to KL divergence:
+- Renyi's alpha-divergences (Li & Turner, 2016)
+- Integral probability metrics such as maximum mean discrepancy, Wasserstein distance (Dziugaite et al., 2015; Zhao et. al, 2017; Tolstikhin et al., 2018)
